@@ -162,6 +162,11 @@ describe("User avatar information", () => {
       {
         imageUrl: "https://picsum.photos/200/300",
         name: "Tom",
+      },
+      {
+        Headers: {
+          authorization: `Bearer ${token}`,
+        },
       }
     );
     avatarId = avatarResponse.data.avatarId;
@@ -218,7 +223,7 @@ describe("Space Info", () => {
     });
     userToken = userLoginResponse.data.token;
 
-    const element1 = await axios.post(
+    const element1Response = await axios.post(
       `${BACKEND_URL}/api/v1/admin/element`,
       {
         imageUrl: "https://picsum.photos/200/300",
@@ -232,7 +237,7 @@ describe("Space Info", () => {
         },
       }
     );
-    const element2 = await axios.post(
+    const element2Response = await axios.post(
       `${BACKEND_URL}/api/v1/admin/element`,
       {
         imageUrl: "https://picsum.photos/200/300",
@@ -246,9 +251,9 @@ describe("Space Info", () => {
         },
       }
     );
-    element1Id = element1.id;
-    element2Id = element2.id;
-    const map = await axios.post(
+    element1Id = element1Response.data.id;
+    element2Id = element2Response.data.id;
+    const mapResponse = await axios.post(
       `${BACKEND_URL}/api/v1/admin/map`,
       {
         thumbnail: "https://picsum.photos/200/300",
@@ -277,7 +282,7 @@ describe("Space Info", () => {
         },
       }
     );
-    mapId = map.id;
+    mapId = mapResponse.id;
   });
 
   test("User is able to create space", async () => {
@@ -294,7 +299,7 @@ describe("Space Info", () => {
         },
       }
     );
-    expect(response.spaceId).toBeDefined();
+    expect(response.data.spaceId).toBeDefined();
   });
 
   test("User is able to create space without mapId(empty space)", async () => {
@@ -310,7 +315,7 @@ describe("Space Info", () => {
         },
       }
     );
-    expect(response.spaceId).toBeDefined();
+    expect(response.data.spaceId).toBeDefined();
   });
 
   test("User is not able to create space without dimension", async () => {
@@ -463,7 +468,7 @@ describe("Areana endpoints", () => {
     });
     userToken = userLoginResponse.data.token;
 
-    const element1 = await axios.post(
+    const element1Response = await axios.post(
       `${BACKEND_URL}/api/v1/admin/element`,
       {
         imageUrl: "https://picsum.photos/200/300",
@@ -477,7 +482,7 @@ describe("Areana endpoints", () => {
         },
       }
     );
-    const element2 = await axios.post(
+    const element2Response = await axios.post(
       `${BACKEND_URL}/api/v1/admin/element`,
       {
         imageUrl: "https://picsum.photos/200/300",
@@ -491,9 +496,9 @@ describe("Areana endpoints", () => {
         },
       }
     );
-    element1Id = element1.id;
-    element2Id = element2.id;
-    const map = await axios.post(
+    element1Id = element1Response.data.id;
+    element2Id = element2Response.data.id;
+    const mapResponse = await axios.post(
       `${BACKEND_URL}/api/v1/admin/map`,
       {
         thumbnail: "https://picsum.photos/200/300",
@@ -522,8 +527,8 @@ describe("Areana endpoints", () => {
         },
       }
     );
-    mapId = map.id;
-    const space = await axios.post(
+    mapId = mapResponse.id;
+    const spaceResponse = await axios.post(
       `${BACKEND_URL}/api/v1/`,
       {
         name: "Test",
@@ -536,7 +541,7 @@ describe("Areana endpoints", () => {
         },
       }
     );
-    spaceId = space.id;
+    spaceId = spaceResponse.data.id;
   });
 
   test("Incorrect spaceId returns a 400", async () => {
@@ -642,3 +647,174 @@ describe("Areana endpoints", () => {
   });
 });
 
+describe("Admin endpoints", () => {
+  let adminToken;
+  let adminId;
+  let userToken;
+  let userId;
+  beforeAll(async () => {
+    const username = "abh" + Math.random();
+    const passwaord = "123456";
+    const signupResponse = await axios.post(`${BACKEND_URL}/api/v1/signup`, {
+      username,
+      passwaord,
+      type: "admin",
+    });
+    adminId = signupResponse.data.userId;
+    const response = await axioss.post(`${BACKEND_URL}/api/v1/login`, {
+      username,
+      passwaord,
+    });
+    adminToken = response.data.token;
+    const userSignupResponse = await axios.post(
+      `${BACKEND_URL}/api/v1/signup`,
+      {
+        username: username + "-user",
+        passwaord,
+        type: "user",
+      }
+    );
+    userId = userSignupResponse.data.userId;
+    const userLoginResponse = await axioss.post(`${BACKEND_URL}/api/v1/login`, {
+      username: username + "-user",
+      passwaord,
+    });
+    userToken = userLoginResponse.data.token;
+  });
+
+  test("Admin is able to hit admin endpoints", async () => {
+    const elementResponse = await axios.post(
+      `${BACKEND_URL}/api/v1/admin/element`,
+      {
+        imageUrl: "https://picsum.photos/200/300",
+        width: 1,
+        height: 1,
+        static: true,
+      },
+      {
+        Headers: {
+          authorization: `Bearer ${userToken}`,
+        },
+      }
+    );
+    const mapResponse = await axios.post(
+      `${BACKEND_URL}/api/v1/admin/map`,
+      {
+        thumbnail: "https://picsum.photos/200/300",
+        dimensions: "100x200",
+        defaultElements: [],
+      },
+      {
+        Headers: {
+          authorization: `Bearer ${userToken}`,
+        },
+      }
+    );
+    const avatarResponse = await axios.post(
+      `${BACKEND_URL}/api/v1/admin/avatar`,
+      {
+        imageUrl: "https://picsum.photos/200/300",
+        name: "Tom",
+      },
+      {
+        Headers: {
+          authorization: `Bearer ${userToken}`,
+        },
+      }
+    );
+    const updateElementResponse = await axios.put(
+      `${BACKEND_URL}/api/v1/admin/elenent/123`,
+      {
+        imageUrl: "https://picsum.photos/id/237/200/300",
+        name: "Tom",
+      },
+      {
+        Headers: {
+          authorization: `Bearer ${userToken}`,
+        },
+      }
+    );
+    expect(elementResponse.statusCode).toBe(403);
+    expect(mapResponse.statusCode).toBe(403);
+    expect(avatarResponse.statusCode).toBe(403);
+    expect(updateElementResponse.statusCode).toBe(403);
+  });
+
+  test("User is not able to hit admin endpoints", async () => {
+    const elementResponse = await axios.post(
+      `${BACKEND_URL}/api/v1/admin/element`,
+      {
+        imageUrl: "https://picsum.photos/200/300",
+        width: 1,
+        height: 1,
+        static: true,
+      },
+      {
+        Headers: {
+          authorization: `Bearer ${adminToken}`,
+        },
+      }
+    );
+    const mapResponse = await axios.post(
+      `${BACKEND_URL}/api/v1/admin/map`,
+      {
+        thumbnail: "https://picsum.photos/200/300",
+        dimensions: "100x200",
+        defaultElements: [],
+      },
+      {
+        Headers: {
+          authorization: `Bearer ${adminToken}`,
+        },
+      }
+    );
+    const avatarResponse = await axios.post(
+      `${BACKEND_URL}/api/v1/admin/avatar`,
+      {
+        imageUrl: "https://picsum.photos/200/300",
+        name: "Tom",
+      },
+      {
+        Headers: {
+          authorization: `Bearer ${adminToken}`,
+        },
+      }
+    );
+    expect(elementResponse.statusCode).toBe(200);
+    expect(mapResponse.statusCode).toBe(200);
+    expect(avatarResponse.statusCode).toBe(200);
+  });
+
+  test("Admin is able to update the imageUrl for an element", async () => {
+    const elementResponse = await axios.post(
+      `${BACKEND_URL}/api/v1/admin/element`,
+      {
+        imageUrl: "https://picsum.photos/200/300",
+        width: 1,
+        height: 1,
+        static: true,
+      },
+      {
+        Headers: {
+          authorization: `Bearer ${adminToken}`,
+        },
+      }
+    );
+
+    const updateElementResponse = await axios.put(
+      `${BACKEND_URL}/api/v1/admin/elenent/${elementResponse.data.id}`,
+      {
+        imageUrl: "https://picsum.photos/id/237/200/300",
+        name: "Tom",
+      },
+      {
+        Headers: {
+          authorization: `Bearer ${adminToken}`,
+        },
+      }
+    );
+    expect(updateElementResponse.statusCode).toBe(200);
+  });
+
+  test("");
+});
