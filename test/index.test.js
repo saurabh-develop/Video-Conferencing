@@ -206,14 +206,14 @@ describe("Space Info", () => {
     const userSignupResponse = await axios.post(
       `${BACKEND_URL}/api/v1/signup`,
       {
-        username,
+        username: username + "-user",
         passwaord,
-        type: "admin",
+        type: "user",
       }
     );
     userId = userSignupResponse.data.userId;
     const userLoginResponse = await axioss.post(`${BACKEND_URL}/api/v1/login`, {
-      username,
+      username: username + "-user",
       passwaord,
     });
     userToken = userLoginResponse.data.token;
@@ -422,3 +422,223 @@ describe("Space Info", () => {
     expect(response.data.spaces.length).toBe(1);
   });
 });
+
+describe("Areana endpoints", () => {
+  let mapId;
+  let element1Id;
+  let element2Id;
+  let adminToken;
+  let adminId;
+  let userToken;
+  let userId;
+  let spaceId;
+
+  beforeAll(async () => {
+    const username = "abh" + Math.random();
+    const passwaord = "123456";
+    const signupResponse = await axios.post(`${BACKEND_URL}/api/v1/signup`, {
+      username,
+      passwaord,
+      type: "admin",
+    });
+    adminId = signupResponse.data.userId;
+    const response = await axioss.post(`${BACKEND_URL}/api/v1/login`, {
+      username,
+      passwaord,
+    });
+    adminToken = response.data.token;
+
+    const userSignupResponse = await axios.post(
+      `${BACKEND_URL}/api/v1/signup`,
+      {
+        username: username + "-user",
+        passwaord,
+        type: "user",
+      }
+    );
+    userId = userSignupResponse.data.userId;
+    const userLoginResponse = await axioss.post(`${BACKEND_URL}/api/v1/login`, {
+      username: username + "-user",
+      passwaord,
+    });
+    userToken = userLoginResponse.data.token;
+
+    const element1 = await axios.post(
+      `${BACKEND_URL}/api/v1/admin/element`,
+      {
+        imageUrl: "https://picsum.photos/200/300",
+        width: 1,
+        height: 1,
+        static: true,
+      },
+      {
+        Headers: {
+          authorization: `Bearer ${adminToken}`,
+        },
+      }
+    );
+    const element2 = await axios.post(
+      `${BACKEND_URL}/api/v1/admin/element`,
+      {
+        imageUrl: "https://picsum.photos/200/300",
+        width: 1,
+        height: 1,
+        static: true,
+      },
+      {
+        Headers: {
+          authorization: `Bearer ${adminToken}`,
+        },
+      }
+    );
+    element1Id = element1.id;
+    element2Id = element2.id;
+    const map = await axios.post(
+      `${BACKEND_URL}/api/v1/admin/map`,
+      {
+        thumbnail: "https://picsum.photos/200/300",
+        dimensions: "100x200",
+        defaultElements: [
+          {
+            elementId: element1Id,
+            x: 20,
+            y: 20,
+          },
+          {
+            elementId: element1Id,
+            x: 18,
+            y: 20,
+          },
+          {
+            elementId: element2Id,
+            x: 19,
+            y: 20,
+          },
+        ],
+      },
+      {
+        Headers: {
+          authorization: `Bearer ${adminToken}`,
+        },
+      }
+    );
+    mapId = map.id;
+    const space = await axios.post(
+      `${BACKEND_URL}/api/v1/`,
+      {
+        name: "Test",
+        dimensions: "100x200",
+        mapId: mapId,
+      },
+      {
+        Headers: {
+          authorization: `Bearer ${userToken}`,
+        },
+      }
+    );
+    spaceId = space.id;
+  });
+
+  test("Incorrect spaceId returns a 400", async () => {
+    const response = await axios.get(`${BACKEND_URL}/api/v1/space/123saur`, {
+      Headers: {
+        authorization: `Bearer ${userToken}`,
+      },
+    });
+    expect(response.statusCode).toBe(400);
+  });
+
+  test("Correct spaceId returns all the elements", async () => {
+    const response = await axios.get(`${BACKEND_URL}/api/v1/space/${spaceId}`, {
+      Headers: {
+        authorization: `Bearer ${userToken}`,
+      },
+    });
+    expect(response.dimensions).toBe("100x200");
+    expect(response.data.elements.length).toBe(3);
+  });
+
+  test("Delete endpoint is able to delete an element", async () => {
+    const response = await axios.get(`${BACKEND_URL}/api/v1/space/${spaceId}`, {
+      Headers: {
+        authorization: `Bearer ${userToken}`,
+      },
+    });
+    await axios.delete(
+      `${BACKEND_URL}/api/v1/space/element`,
+      {
+        spaceId: spaceId,
+        elementId: response.data.elements[0].id,
+      },
+      {
+        Headers: {
+          authorization: `Bearer ${userToken}`,
+        },
+      }
+    );
+    const newResponse = await axios.get(
+      `${BACKEND_URL}/api/v1/space/${spaceId}`,
+      {
+        Headers: {
+          authorization: `Bearer ${userToken}`,
+        },
+      }
+    );
+    expect(newResponse.data.elements.length).toBe(2);
+    expect(response.dimensions).toBe("100x200");
+    expect(response.data.elements.length).toBe(3);
+  });
+
+  test("Adding an element fails if element lies outside the dimension work as expected", async () => {
+    const response = await axios.get(
+      `${BACKEND_URL}/api/v1/space/element`,
+      {
+        elementId: element1Id,
+        spaceId: spaceId,
+        x: 100000,
+        y: 2100000,
+      },
+      {
+        Headers: {
+          authorization: `Bearer ${userToken}`,
+        },
+      }
+    );
+    const newResponse = await axios.get(
+      `${BACKEND_URL}/api/v1/space/${spaceId}`,
+      {
+        Headers: {
+          authorization: `Bearer ${userToken}`,
+        },
+      }
+    );
+    expect(newResponse.statusCode).toBe(400);
+  });
+
+  test("Adding an element work as expected", async () => {
+    const response = await axios.get(
+      `${BACKEND_URL}/api/v1/space/element`,
+      {
+        elementId: element1Id,
+        spaceId: spaceId,
+        x: 50,
+        y: 20,
+      },
+      {
+        Headers: {
+          authorization: `Bearer ${userToken}`,
+        },
+      }
+    );
+    const newResponse = await axios.get(
+      `${BACKEND_URL}/api/v1/space/${spaceId}`,
+      {
+        Headers: {
+          authorization: `Bearer ${userToken}`,
+        },
+      }
+    );
+    expect(newResponse.data.elements.length).toBe(3);
+  });
+});
+
